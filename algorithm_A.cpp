@@ -26,17 +26,9 @@ using namespace std;
  * 3. The function that return the color fo the cell(row, col)
  * 4. The function that print out the current board statement
 *************************************************************************/
-class Simple_orbs
-{
-public:
-    int num;
-    char color;
-    Simple_orbs():num(0),color('w'){};
-    Simple_orbs(int n,char c):num(n),color(c){};
-};
+
 
 void update_cell_value(Board,Player,int (&) [5][6]);
-void update_explode_state(Simple_orbs (&)[5][6],Board);
 bool put_corner(Board,Player);
 Position get_corner_coordinate(Board,Player);
 bool put_edge(Board,Player);
@@ -46,13 +38,14 @@ Position get_edge_coordinate(Board,Player);
 
 void algorithm_A(Board board, Player player, int index[]){
 
-    Simple_orbs explode_state[5][6];
+    int cell_value[5][6]={0};
     mt19937 mt_rand(time(NULL));
-    update_explode_state(explode_state,board);
+    update_cell_value(board,player,cell_value);
     Position coordinate;
     int value = 0;
     int color = player.get_color();
-    /*for (int i=0;i<5;i++)
+    int enemy_color = (color=='r')?'b':'r';
+    for (int i=0;i<5;i++)
     {
         for (int j=0;j<6;j++)
         {
@@ -63,38 +56,28 @@ void algorithm_A(Board board, Player player, int index[]){
                 coordinate.second = j;
             }
         }
-    }*/
-    /*if (value == 0)
+    }
+    if (value == 0)
     {
         if (put_corner(board,player))
         {
             coordinate = get_corner_coordinate(board,player);
         }
-        else if (put_edge(board,player))
-        {
-            coordinate = get_edge_coordinate(board,player);
-        }
         else
         {
-
-            while (board.get_cell_color(coordinate.first,coordinate.second)!='w' && board.get_cell_color(coordinate.first,coordinate.second)!=player.get_color())
+            while (board.get_cell_color(coordinate.first,coordinate.second)==enemy_color || cell_value[coordinate.first][coordinate.second] < value)
             {
                 while (1)
                 {
                     coordinate.first = mt_rand()%5;
-                    if (coordinate.first!=0 && coordinate.first!=4) break;
-                }
-                while (1)
-                {
                     coordinate.second = mt_rand()%6;
-                    if (coordinate.second!=0 && coordinate.second!=5) break;
+                    if (!((coordinate.first==0 && coordinate.second==0)||(coordinate.first==0 && coordinate.second==5)||(coordinate.first==4 && coordinate.second==0)||(coordinate.first==4 && coordinate.second==5))) break;
                 }
             }
         }
-
-        index[0] = coordinate.first;
-        index[1] = coordinate.second;
-    }*/
+    }
+    index[0] = coordinate.first;
+    index[1] = coordinate.second;
 }
 
 bool put_corner(Board board, Player player)
@@ -146,25 +129,50 @@ Position get_corner_coordinate(Board board,Player player)
 
 }
 
-void update_explode_state(Simple_orbs (&explode_state)[5][6],Board board)
-{
-    for (int i=0;i<5;i++)
-    {
-        for (int j=0;j<6;j++)
-        {
-            explode_state[i][j].num = board.get_orbs_num(i,j);
-            explode_state[i][j].color = board.get_cell_color(i,j);
-        }
-    }
-}
 
 void update_cell_value(Board board,Player player,int (&cell_value)[5][6])
 {
+    char enemy_color=(player.get_color()=='r')?'b':'r';
     for (int i=0;i<5;i++)
     {
         for (int j=0;j<6;j++)
         {
-            if (board.get_cell_color(i,j)!=player.get_color()) continue;
+            if (board.get_cell_color(i,j)==enemy_color) continue;
+            else if (board.get_cell_color(i,j) == 'w')
+            {
+                if (i-1>=0)
+                {
+                    if (board.get_orbs_num(i-1,j) == board.get_capacity(i-1,j)-1 && board.get_cell_color(i-1,j)==enemy_color)
+                    {
+                        cell_value[i][j]==-10;
+                        continue;
+                    }
+                }
+                if (i+1<5)
+                {
+                    if (board.get_orbs_num(i+1,j) == board.get_capacity(i+1,j)-1 && board.get_cell_color(i+1,j)==enemy_color)
+                    {
+                        cell_value[i][j]==-10;
+                        continue;
+                    }
+                }
+                if (j-1>=0)
+                {
+                    if (board.get_orbs_num(i,j-1) == board.get_capacity(i,j-1)-1 && board.get_cell_color(i,j-1)==enemy_color)
+                    {
+                        cell_value[i][j]==-10;
+                        continue;
+                    }
+                }
+                if (j+1<6)
+                {
+                    if (board.get_orbs_num(i,j+1) == board.get_capacity(i,j+1)-1 && board.get_cell_color(i,j+1)==enemy_color)
+                    {
+                        cell_value[i][j]==-10;
+                        continue;
+                    }
+                }
+            }
             switch(board.get_capacity(i,j))
             {
                 case(2):
@@ -176,30 +184,30 @@ void update_cell_value(Board board,Player player,int (&cell_value)[5][6])
                     int critical_cell_num = 0;
                     if (i==0 && j==0)
                     {
-                        if (board.get_orbs_num(1,0)==2 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                        if (board.get_orbs_num(1,0)==2 && board.get_cell_color(1,0)==enemy_color)
                             critical_cell_num+=1;
-                        if (board.get_orbs_num(0,1)==2 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                        if (board.get_orbs_num(0,1)==2 && board.get_cell_color(0,1)==enemy_color)
                             critical_cell_num+=1;
                     }
                     else if (i==0 && j==5)
                     {
-                        if (board.get_orbs_num(1,5)==2 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                        if (board.get_orbs_num(1,5)==2 && board.get_cell_color(1,5)==enemy_color)
                             critical_cell_num+=1;
-                        if (board.get_orbs_num(0,4)==2 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                        if (board.get_orbs_num(0,4)==2 && board.get_cell_color(0,4)==enemy_color)
                             critical_cell_num+=1;
                     }
                     else if (i==4 && j==0)
                     {
-                        if (board.get_orbs_num(3,0)==2 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                        if (board.get_orbs_num(3,0)==2 && board.get_cell_color(3,0)==enemy_color)
                             critical_cell_num+=1;
-                        if (board.get_orbs_num(4,1)==2 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                        if (board.get_orbs_num(4,1)==2 && board.get_cell_color(4,1)==enemy_color)
                             critical_cell_num+=1;
                     }
                     else if (i==4 && j==5)
                     {
-                        if (board.get_orbs_num(3,5)==2 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                        if (board.get_orbs_num(3,5)==2 && board.get_cell_color(3,5)==enemy_color)
                             critical_cell_num+=1;
-                        if (board.get_orbs_num(4,4)==2 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                        if (board.get_orbs_num(4,4)==2 && board.get_cell_color(4,4)==enemy_color)
                             critical_cell_num+=1;
                     }
                     cell_value[i][j] = (critical_cell_num!=0)?cell_value[i][j]*(-critical_cell_num):cell_value[i][j];
@@ -216,29 +224,29 @@ void update_cell_value(Board board,Player player,int (&cell_value)[5][6])
                     {
                         if (j==1)
                         {
-                            if (board.get_orbs_num(0,j-1)==1 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(0,j-1)==1 && board.get_cell_color(0,j-1)==enemy_color)
                                 critical_cell_num+=1;
-                            if (board.get_orbs_num(0,j+1)==2 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(0,j+1)==2 && board.get_cell_color(0,j+1)==enemy_color)
                                 critical_cell_num+=1;
-                            if (board.get_orbs_num(1,j)==3 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(1,j)==3 && board.get_cell_color(1,j)==enemy_color)
                                 critical_cell_num+=1;
                         }
                         else if (j==4)
                         {
-                            if (board.get_orbs_num(0,j-1)==2 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(0,j-1)==2 && board.get_cell_color(0,j-1)==enemy_color)
                                 critical_cell_num+=1;
-                            if (board.get_orbs_num(0,j+1)==1 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(0,j+1)==1 && board.get_cell_color(0,j+1)==enemy_color)
                                 critical_cell_num+=1;
-                            if (board.get_orbs_num(1,j)==3 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(1,j)==3 && board.get_cell_color(1,j)==enemy_color)
                                 critical_cell_num+=1;
                         }
                         else
                         {
-                            if (board.get_orbs_num(0,j-1)==2 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(0,j-1)==2 && board.get_cell_color(0,j-1)==enemy_color)
                                 critical_cell_num+=1;
-                            if (board.get_orbs_num(0,j+1)==2 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(0,j+1)==2 && board.get_cell_color(0,j+1)==enemy_color)
                                 critical_cell_num+=1;
-                            if (board.get_orbs_num(1,j)==3 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(1,j)==3 && board.get_cell_color(1,j)==enemy_color)
                                 critical_cell_num+=1;
                         }
 
@@ -247,29 +255,29 @@ void update_cell_value(Board board,Player player,int (&cell_value)[5][6])
                     {
                         if (i==1)
                         {
-                            if (board.get_orbs_num(i-1,0)==1 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(i-1,0)==1 && board.get_cell_color(i-1,0)==enemy_color)
                                 critical_cell_num+=1;
-                            if (board.get_orbs_num(i+1,0)==2 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(i+1,0)==2 && board.get_cell_color(i+1,0)==enemy_color)
                                 critical_cell_num+=1;
-                            if (board.get_orbs_num(i,1)==3 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(i,1)==3 && board.get_cell_color(i,1)==enemy_color)
                                 critical_cell_num+=1;
                         }
                         else if (i==3)
                         {
-                            if (board.get_orbs_num(i-1,0)==2 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(i-1,0)==2 && board.get_cell_color(i-1,0)==enemy_color)
                                 critical_cell_num+=1;
-                            if (board.get_orbs_num(i+1,0)==1 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(i+1,0)==1 && board.get_cell_color(i+1,0)==enemy_color)
                                 critical_cell_num+=1;
-                            if (board.get_orbs_num(i,1)==3 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(i,1)==3 && board.get_cell_color(i,1)==enemy_color)
                                 critical_cell_num+=1;
                         }
                         else
                         {
-                            if (board.get_orbs_num(i-1,0)==2 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(i-1,0)==2 && board.get_cell_color(i-1,0)==enemy_color)
                                 critical_cell_num+=1;
-                            if (board.get_orbs_num(i+1,0)==2 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(i+1,0)==2 && board.get_cell_color(i+1,0)==enemy_color)
                                 critical_cell_num+=1;
-                            if (board.get_orbs_num(i,1)==3 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(i,1)==3 && board.get_cell_color(i,1)==enemy_color)
                                 critical_cell_num+=1;
                         }
 
@@ -278,29 +286,29 @@ void update_cell_value(Board board,Player player,int (&cell_value)[5][6])
                     {
                         if (j==1)
                         {
-                            if (board.get_orbs_num(4,j-1)==1 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(4,j-1)==1 && board.get_cell_color(4,j-1)==enemy_color)
                                 critical_cell_num+=1;
-                            if (board.get_orbs_num(4,j+1)==2 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(4,j+1)==2 && board.get_cell_color(4,j+1)==enemy_color)
                                 critical_cell_num+=1;
-                            if (board.get_orbs_num(3,j)==3 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(3,j)==3 && board.get_cell_color(3,j)==enemy_color)
                                 critical_cell_num+=1;
                         }
                         else if (j==4)
                         {
-                            if (board.get_orbs_num(4,j-1)==2 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(4,j-1)==2 && board.get_cell_color(4,j-1)==enemy_color)
                                 critical_cell_num+=1;
-                            if (board.get_orbs_num(4,j+1)==1 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(4,j+1)==1 && board.get_cell_color(4,j+1)==enemy_color)
                                 critical_cell_num+=1;
-                            if (board.get_orbs_num(3,j)==3 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(3,j)==3 && board.get_cell_color(3,j)==enemy_color)
                                 critical_cell_num+=1;
                         }
                         else
                         {
-                            if (board.get_orbs_num(4,j-1)==2 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(4,j-1)==2 && board.get_cell_color(4,j-1)==enemy_color)
                                 critical_cell_num+=1;
-                            if (board.get_orbs_num(4,j+1)==2 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(4,j+1)==2 && board.get_cell_color(4,j+1)==enemy_color)
                                 critical_cell_num+=1;
-                            if (board.get_orbs_num(3,j)==3 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(3,j)==3 && board.get_cell_color(3,j)==enemy_color)
                                 critical_cell_num+=1;
                         }
 
@@ -309,29 +317,29 @@ void update_cell_value(Board board,Player player,int (&cell_value)[5][6])
                     {
                         if (i==1)
                         {
-                            if (board.get_orbs_num(i-1,5)==1 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(i-1,5)==1 && board.get_cell_color(i-1,5)==enemy_color)
                                 critical_cell_num+=1;
-                            if (board.get_orbs_num(i+1,5)==2 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(i+1,5)==2 && board.get_cell_color(i+1,5)==enemy_color)
                                 critical_cell_num+=1;
-                            if (board.get_orbs_num(i,4)==3 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(i,4)==3 && board.get_cell_color(i,4)==enemy_color)
                                 critical_cell_num+=1;
                         }
                         else if (i==3)
                         {
-                            if (board.get_orbs_num(i-1,5)==2 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(i-1,5)==2 && board.get_cell_color(i-1,5)==enemy_color)
                                 critical_cell_num+=1;
-                            if (board.get_orbs_num(i+1,5)==1 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(i+1,5)==1 && board.get_cell_color(i+1,5)==enemy_color)
                                 critical_cell_num+=1;
-                            if (board.get_orbs_num(i,4)==3 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(i,4)==3 && board.get_cell_color(i,4)==enemy_color)
                                 critical_cell_num+=1;
                         }
                         else
                         {
-                            if (board.get_orbs_num(i-1,5)==1 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(i-1,5)==1 && board.get_cell_color(i-1,5)==enemy_color)
                                 critical_cell_num+=1;
-                            if (board.get_orbs_num(i+1,5)==2 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(i+1,5)==2 && board.get_cell_color(i+1,5)==enemy_color)
                                 critical_cell_num+=1;
-                            if (board.get_orbs_num(i,4)==3 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                            if (board.get_orbs_num(i,4)==3 && board.get_cell_color(i,4)==enemy_color)
                                 critical_cell_num+=1;
                         }
 
@@ -346,13 +354,13 @@ void update_cell_value(Board board,Player player,int (&cell_value)[5][6])
                         cell_value[i][j] = -2;
                     }
                     int critical_cell_num = 0;
-                    if (board.get_orbs_num(i-1,j)==3 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                    if (board.get_orbs_num(i-1,j)==3 && board.get_cell_color(i-1,j)==enemy_color)
                         critical_cell_num+=1;
-                    if (board.get_orbs_num(i+1,j)==3 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                    if (board.get_orbs_num(i+1,j)==3 && board.get_cell_color(i+1,j)==enemy_color)
                         critical_cell_num+=1;
-                    if (board.get_orbs_num(i,j-1)==3 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                    if (board.get_orbs_num(i,j-1)==3 && board.get_cell_color(i,j-1)==enemy_color)
                         critical_cell_num+=1;
-                    if (board.get_orbs_num(i,j+1)==3 && board.get_cell_color(i,j)!='w' && board.get_cell_color(i,j)!=player.get_color())
+                    if (board.get_orbs_num(i,j+1)==3 && board.get_cell_color(i,j+1)==enemy_color)
                         critical_cell_num+=1;
                     cell_value[i][j] = (critical_cell_num!=0)?cell_value[i][j]*(-critical_cell_num):cell_value[i][j];
                     break;
